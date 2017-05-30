@@ -1,18 +1,35 @@
-import 'p5'
-let sz = window.innerHeight < window.innerWidth ? window.innerHeight : window.innerWidth
+const p5 = require('p5')
+const tone = require('tone')
 
-window.setup = () => {
-	createCanvas(window.innerWidth, window.innerHeight)
-}
+const lhasa = new p5((l) => {
 
-window.draw = () => {
-	background(0)
-	noStroke()
-	fill(200)
-	ellipse(width/2, height/2, sz -10, sz -10)
-}
+	let sz = window.innerHeight < window.innerWidth ? window.innerHeight : window.innerWidth
 
-window.windowResized = () => {
-	sz = window.innerHeight < window.innerWidth ? window.innerHeight : window.innerWidth
-	resizeCanvas(window.innerWidth, window.innerHeight)
-}
+	l.setup = () => {
+		l.createCanvas(window.innerWidth, window.innerHeight)
+	}
+
+	l.draw = () => {
+		l.background(0)
+		l.noStroke()
+		l.fill(200)
+		l.ellipse(l.width/2, l.height/2, sz -10, sz -10)
+	}
+
+	l.windowResized = () => {
+		sz = window.innerHeight < window.innerWidth ? window.innerHeight : window.innerWidth
+		l.resizeCanvas(window.innerWidth, window.innerHeight)
+	}
+
+	l.mousePressed = () => {
+		if(l.dist(l.mouseX, l.mouseY, l.width/2, l.height/2) < sz - 10){
+			triggerSynth()
+		} 
+	}	
+
+	const triggerSynth = () => {
+		const synth = new tone.Synth().toMaster()
+		synth.triggerAttackRelease('C4', '8n')
+	}
+
+}, 'lhasa-container')

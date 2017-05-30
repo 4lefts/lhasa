@@ -1,5 +1,5 @@
 const path = require('path')
-const html = require('html-webpack-plugin')
+const htmlPlugin = require('html-webpack-plugin')
 
 module.exports = {
 	entry: './src/app.js',
@@ -20,7 +20,7 @@ module.exports = {
 			}]
 		}]
 	},
-	plugins: [new html({
+	plugins: [new htmlPlugin({
 		filename: 'index.html',
 		title: 'lhasa',
 		template: __dirname + '/src/index.html',

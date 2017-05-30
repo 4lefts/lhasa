@@ -1,21 +1,18 @@
 import 'p5'
-let w
-const container = document.getElementById('lhasa-container')
+let sz = window.innerHeight < window.innerWidth ? window.innerHeight : window.innerWidth
 
 window.setup = () => {
-	w = container.offsetWidth
-	const cnv = createCanvas(w, w)
-	cnv.parent('lhasa-container')
+	createCanvas(window.innerWidth, window.innerHeight)
 }
 
 window.draw = () => {
-	background(255)
+	background(0)
 	noStroke()
 	fill(200)
-	ellipse(width/2, height/2, width, height)
+	ellipse(width/2, height/2, sz -10, sz -10)
 }
 
 window.windowResized = () => {
-	w = container.offsetWidth
-	resizeCanvas(w, w)
+	sz = window.innerHeight < window.innerWidth ? window.innerHeight : window.innerWidth
+	resizeCanvas(window.innerWidth, window.innerHeight)
 }

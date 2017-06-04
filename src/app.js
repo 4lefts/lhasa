@@ -23,6 +23,7 @@ const lhasa = new p5(function(l){
 			soundPlayer.loopEnd = 6.35
 			waveformArray = computeWaveform(soundPlayer.buffer.getChannelData(0), window.innerWidth, window.innerHeight)
 			loaded = true
+			console.log('sample loaded!')
 			console.log(`sample length (seconds): ${soundPlayer.buffer.duration}`)
 		}).toMaster()
 
@@ -177,7 +178,6 @@ const lhasa = new p5(function(l){
 	}
 
 	function updateLoopPoints(p1, p2){
-		console.log(p1, p2)
 		let t1, t2
 		if(p1 === p2) {
 			t1 = l.map(p1, 0, l.width, 0, soundPlayer.buffer.duration)

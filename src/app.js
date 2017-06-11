@@ -16,16 +16,28 @@ const lhasa = new p5(function(l){
 	let pMouseIsPressed = false
 	let editable = true
 
+	let isPlaying = false
+
+	const env = new Tone.AmplitudeEnvelope({
+		"attack": 0.5,
+		"decay": 0,
+		"sustain": 1,
+		"release": 0.5,
+		"attackCurve": "sine",
+		"releaseCurve": "sine"
+	}).toMaster()
+
 	const	soundPlayer = new Tone.Player('./gtr.mp3', function(){
 			soundPlayer.loop = true
-			soundPlayer.playbackRate = 0.55
-			soundPlayer.loopStart = 3.26
-			soundPlayer.loopEnd = 6.35
+			soundPlayer.playbackRate = 1
+			soundPlayer.loopStart = 0
+			soundPlayer.loopEnd = 0
 			waveformArray = computeWaveform(soundPlayer.buffer.getChannelData(0), window.innerWidth, window.innerHeight)
 			loaded = true
 			console.log('sample loaded!')
 			console.log(`sample length (seconds): ${soundPlayer.buffer.duration}`)
-		}).toMaster()
+			soundPlayer.start()
+		}).connect(env)
 
 
 	l.setup = function(){
@@ -50,7 +62,7 @@ const lhasa = new p5(function(l){
 			if(editable) checkLoopPointEdit()
 			drawWaveform(waveformArray, l.height)
 			drawLoopPoints(soundPlayer.loopStart, soundPlayer.loopEnd, soundPlayer.buffer.duration)
-			drawPlayButton(soundPlayer.state)
+			drawPlayButton(env.getValueAtTime()) //draw play button if the envelope is running
 		}	else {
 			drawLoading()
 		}
@@ -64,7 +76,7 @@ const lhasa = new p5(function(l){
 	function checkPress(x, y){
 		if(x > 10 && x < 60 && y > 10 && y < 60){
 			editable = false //stop button updating loop points
-			startStop(soundPlayer.state)
+			startStop()
 		}
 	}
 
@@ -82,12 +94,14 @@ const lhasa = new p5(function(l){
 		pMouseIsPressed = l.mouseIsPressed
 	}
 
-	function startStop(state){
-		if(state === 'stopped'){
-			soundPlayer.start()
+	function startStop(){
+		if(!isPlaying){
+			soundPlayer.seek(soundPlayer.loopStart)
+			env.triggerAttack()
 		} else {
-			soundPlayer.stop()
+			env.triggerRelease()
 		}
+		isPlaying = !isPlaying
 	}
 
 	function computeWaveform(inputArr, w, h){
@@ -125,7 +139,7 @@ const lhasa = new p5(function(l){
 
 	function drawLoopPoints(s, e, tot){
 		const x1 = l.map(s, 0, tot, 0, l.width)
-		const x2 = l.map(e - s, 0, tot, 0, l.width)
+		const x2 = e == 0 ? l.width : l.map(e - s, 0, tot, 0, l.width)
 		l.push()
 		l.translate(x1, 0)
 		l.noStroke()
@@ -157,7 +171,7 @@ const lhasa = new p5(function(l){
 		l.push()
 		l.translate(10, 10)
 		l.noStroke()
-		if(state === 'stopped'){
+		if(!state){
 			l.fill(lightGrey)
 			l.rect(0, 0, 50, 50)
 			l.fill(blue)

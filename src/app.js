@@ -14,8 +14,10 @@ const lhasa = new p5(function(l){
 	let tmpLoopEnd = 0
 	let finalPressPoint = 0
 	let pMouseIsPressed = false
-	let editable = true
+	let loopEdit = true
 
+	let rateEdit = false
+	let volumeEdit = false
 	let isPlaying = false
 
 	const env = new Tone.AmplitudeEnvelope({
@@ -32,6 +34,7 @@ const lhasa = new p5(function(l){
 			soundPlayer.playbackRate = 1
 			soundPlayer.loopStart = 0
 			soundPlayer.loopEnd = 0
+			soundPlayer.volume.value = -6
 			waveformArray = computeWaveform(soundPlayer.buffer.getChannelData(0), window.innerWidth, window.innerHeight)
 			loaded = true
 			console.log('sample loaded!')
@@ -46,7 +49,9 @@ const lhasa = new p5(function(l){
 			if(loaded) checkPress(l.mouseX, l.mouseY)
 		})
 		cnv.mouseReleased(function(){
-			editable = true
+			loopEdit = true
+			volumeEdit = false
+			rateEdit = false
 		})
 		lightGrey = l.color(217, 225, 232)
 		midGrey = l.color(155, 174, 200)
@@ -59,10 +64,14 @@ const lhasa = new p5(function(l){
 	l.draw = function(){
 		l.background(darkGray)
 		if(loaded) {
-			if(editable) checkLoopPointEdit()
+			if(loopEdit) checkLoopPointEdit()
+			if(rateEdit) updateRate(l.mouseX)
+			if(volumeEdit) updateVolume(l.mouseX)
 			drawWaveform(waveformArray, l.height)
 			drawLoopPoints(soundPlayer.loopStart, soundPlayer.loopEnd, soundPlayer.buffer.duration)
 			drawPlayButton(env.getValueAtTime()) //draw play button if the envelope is running
+			drawControl(soundPlayer.playbackRate, 0, l.height - 100, 0.5, 2, 'rate')
+			drawControl(soundPlayer.volume.value, 0, l.height - 50, -48, 0, 'volume') //in db
 		}	else {
 			drawLoading()
 		}
@@ -73,10 +82,21 @@ const lhasa = new p5(function(l){
 		l.resizeCanvas(window.innerWidth, window.innerHeight)
 	}
 
+	//mouse interaction control functions
 	function checkPress(x, y){
 		if(x > 10 && x < 60 && y > 10 && y < 60){
-			editable = false //stop button updating loop points
+			loopEdit = false //stop button updating loop points
 			startStop()
+		}
+		if(y > l.height - 100 &&  y < l.height - 50){
+			loopEdit = false
+			volumeEdit = false
+			rateEdit = true
+		}
+		if(y > l.height - 50){
+			loopEdit = false
+			rateEdit = false
+			volumeEdit = true
 		}
 	}
 
@@ -170,18 +190,33 @@ const lhasa = new p5(function(l){
 	function drawPlayButton(state){
 		l.push()
 		l.translate(10, 10)
+		l.noFill()
+		l.stroke(lightGrey)
+		l.noFill()
+		l.rect(0, 0, 50, 50)
 		l.noStroke()
+		l.fill(blue)
 		if(!state){
-			l.fill(lightGrey)
-			l.rect(0, 0, 50, 50)
-			l.fill(blue)
-			l.triangle(10, 10, 40, 25, 10, 40)
+			l.triangle(5, 5, 45, 25, 5, 45)
 		} else{
-			l.fill(lightGrey)
-			l.rect(0, 0, 50, 50)
-			l.fill(blue)
-			l.rect(10, 10, 30, 30)
+			l.rect(5, 5, 40, 40)
 		}
+		l.pop()
+	}
+
+	function drawControl(lvl, x, y, low, high, name){ //in db
+		const w = l.map(lvl, low, high, 0, l.width)
+		console.log(w)
+		l.push()
+		l.translate(x, y)
+		l.stroke(lightGrey)
+		l.fill(darkGray)
+		l.rect(0, 0, w, 50)
+		l.noStroke()
+		l.fill(lightGrey)
+		// l.textSize(16)
+		const txt = `${name}: ${lvl.toPrecision(2)}`
+		l.text(txt, 10, 40)
 		l.pop()
 	}
 
@@ -206,6 +241,16 @@ const lhasa = new p5(function(l){
 
 		soundPlayer.setLoopPoints(t1, t2)
 		soundPlayer.seek(t1)
+	}
+
+	function updateVolume(x){
+		const vol = x > 0 ? l.map(x, 0, l.width, -48, 0) : -Infinity
+		soundPlayer.volume.value = vol
+	}
+
+	function updateRate(x){
+		const rate = l.map(x, 0, l.width, 0.5, 2)
+		soundPlayer.playbackRate = rate
 	}
 
 }, 'lhasa-container')

@@ -8,19 +8,15 @@ const lhasa = new p5(function(l){
 	let lightGrey, midGrey, midGreyAlpha, darkGray, blue, blueAlpha
 
 	l.setup = function(){
-		const cnv = l.createCanvas(window.innerWidth, window.innerHeight)
-		samplers.push(new Sampler(0, 0, l.width, l.height/2))
-		samplers.push(new Sampler(0, l.height/2, l.width, l.height/2))
+		const cnv = l.createCanvas(document.documentElement.clientWidth, document.documentElement.clientHeight)
+		samplers.push(new Sampler('./gtr.mp3', 0, 0, l.width, l.height/2))
+		samplers.push(new Sampler('./gtr.mp3', 0, l.height/2, l.width, l.height/2))
 		cnv.mousePressed(function(){
-			routePress(l.mouseX, l.mouseY)
-		})
-		cnv.mouseReleased(function(){
 			samplers.forEach(function(sampler){
-				sampler.loopEdit = true
-				sampler.volumeEdit = false
-				sampler.rateEdit = false
+				sampler.checkPress(l.mouseX, l.mouseY)
 			})
 		})
+
 		lightGrey = l.color(217, 225, 232)
 		midGrey = l.color(155, 174, 200)
 		midGreyAlpha = l.color(155, 174, 200, 100)
@@ -47,22 +43,27 @@ const lhasa = new p5(function(l){
 		})
 	}
 
-	l.windowResized = function(){
+	l.mouseReleased = function(){
 		samplers.forEach(function(sampler){
+			sampler.loopEdit = true
+			sampler.volumeEdit = false
+			sampler.rateEdit = false
+		})
+	}
+
+	l.windowResized = function(){
+		samplers.forEach(function(sampler, index){
+			sampler.updatePosition(0, index * (l.height/2), l.width, l.height/2)
 			sampler.computeWaveform()
-			//this is harder - the this.w and this.h need to change, and be used to update the waveformArray
 		})
 		l.resizeCanvas(window.innerWidth, window.innerHeight)
 	}
 
-	//route presses to the right sampler
-	function routePress(x, y){
-		samplers.forEach(function(sampler){
-			sampler.checkPress(x, y)
-		})
-	}
-
-	function Sampler(_x, _y, _w, _h){
+	//---------------------------------
+	//THE SAMPLER OBJECT
+	//---------------------------------
+	function Sampler(_f, _x, _y, _w, _h){
+		this.fileName = _f
 		//vars for location/size of player on cnvs
 		this.x = _x
 		this.y = _y
@@ -91,7 +92,7 @@ const lhasa = new p5(function(l){
 			"releaseCurve": "sine"
 		}).toMaster()
 
-		this.soundPlayer = new Tone.Player('./gtr.mp3', this.initSampler.bind(this)).connect(this.env)
+		this.soundPlayer = new Tone.Player(this.fileName, this.initSampler.bind(this)).connect(this.env)
 	}
 
 	Sampler.prototype.initSampler = function(){
@@ -107,19 +108,22 @@ const lhasa = new p5(function(l){
 		this.soundPlayer.start()
 	}
 
+	//-----------
+	//sampler interactivity functions
+	//-----------
 	Sampler.prototype.checkPress = function(x, y){
 		if(this.loaded){
 			if(x > this.x && x < this.x + this.w && y > this.y && y < this.y + this.h){
-				//check if press is on play button
 				if(x > this.x + 10 && x < this.x + 60 && y > this.y + 10 && y < this.y + 60){
+					//check if press is on play button
 					this.loopEdit = false //stop button updating loop points
 					this.startStop()
-				} else if(y > this.h - 100 &&  y < this.h - 50){
+				} else if(y > this.y + this.h - 100 &&  y < this.y + this.h - 50){
 					//check if press is on rate edit control
 					this.loopEdit = false
 					this.rateEdit = true
 					this.volumeEdit = false
-				} else if(y > this.h - 50){
+				} else if(y > this.y + this.h - 50){
 					// check if press is on vol edit control
 					this.loopEdit = false
 					this.rateEdit = false
@@ -137,6 +141,51 @@ const lhasa = new p5(function(l){
 		}
 	}
 
+	Sampler.prototype.checkLoopPointEdit = function(){
+		if(l.mouseIsPressed && !this.pMouseIsPressed){
+			this.initialPressPoint = l.mouseX
+		}
+		if(l.mouseIsPressed && this.pMouseIsPressed){
+			this.tmpLoopEnd = l.mouseX
+			this.drawEditPoints(this.initialPressPoint, this.tmpLoopEnd)
+		}
+		if(!l.mouseIsPressed && this.pMouseIsPressed){
+			this.updateLoopPoints(this.initialPressPoint, this.tmpLoopEnd)
+			this.loopEdit = false
+		}
+		this.pMouseIsPressed = l.mouseIsPressed
+	}
+
+	//-----------
+	//sammpler update functions
+	//-----------
+	Sampler.prototype.updatePosition = function (newX, newY, newW, newH) {
+		this.x = newX
+		this.y = newY
+		this.w = newW
+		this.h = newH
+	};
+
+	Sampler.prototype.updateLoopPoints = function(p1, p2){
+		let t1, t2
+		//check for mouse press and release in same place
+		//this sound have **some** duration
+		if(p1 === p2) {
+			t1 = l.map(p1, this.x, this.x + this.w, 0, this.soundPlayer.buffer.duration)
+			t2 = l.map(p2 + 1, this.x, this.x + this.w, 0, this.soundPlayer.buffer.duration)
+		}	else if(p1 < p2){
+			t1 = l.map(p1, this.x, this.x + this.w, 0, this.soundPlayer.buffer.duration)
+			t2 = l.map(p2, this.x, this.x + this.w, 0, this.soundPlayer.buffer.duration)
+		} else {
+			t1 = l.map(p2, this.x, this.x + this.w, 0, this.soundPlayer.buffer.duration)
+			t2 = l.map(p1, this.x, this.x + this.w, 0, this.soundPlayer.buffer.duration)
+		}
+		const loop1 = l.constrain(t1, 0, this.soundPlayer.buffer.duration)
+		const loop2 = l.constrain(t2, 0, this.soundPlayer.buffer.duration)
+		this.soundPlayer.setLoopPoints(loop1, loop2)
+		this.soundPlayer.seek(loop1)
+	}
+
 	Sampler.prototype.startStop = function(){
 		if(!this.isPlaying){
 			this.soundPlayer.seek(this.soundPlayer.loopStart)
@@ -148,12 +197,14 @@ const lhasa = new p5(function(l){
 	}
 
 	Sampler.prototype.updateVolume = function(x){
-		const vol = x > 0 ? l.map(x, 0, this.w, -48, 0) : -Infinity
+		//N.B sampler GUI positions other than 0 are not well handled here...
+		const vol = l.constrain(x > 0 ? l.map(x, 0, this.w, -48, 0) : -Infinity, -Infinity, 0)
 		this.soundPlayer.volume.value = vol
 	}
 
 	Sampler.prototype.updateRate = function(x){
-		const rate = l.map(x, 0, this.w, 0.5, 2)
+		//N.B sampler GUI positions other than 0 are not well handled here...
+		const rate = l.constrain(l.map(x, 0, this.w, 0.5, 2), 0.5, 2)
 		this.soundPlayer.playbackRate = rate
 	}
 
@@ -165,7 +216,9 @@ const lhasa = new p5(function(l){
 		}).map(elem => elem * this.h/2)
 	}
 
+	//-----------
 	//gui draw functions
+	//-----------
 	Sampler.prototype.drawLoading = function(){
 		l.push()
 		l.textSize(32)
@@ -212,7 +265,6 @@ const lhasa = new p5(function(l){
 		//get in order low-high
 		const low = p1 < p2 ? p1 : p2
 		const high = p2 > p1 ? p2 : p1
-		console.log(`low is ${low}, and high is ${high}`)
 		l.push()
 		l.translate(this.x + low, this.y)
 		l.noStroke()
@@ -257,41 +309,5 @@ const lhasa = new p5(function(l){
 		const txt = `${name}: ${lvl.toPrecision(2)}`
 		l.text(txt, 10, 40)
 		l.pop()
-	}
-
-	Sampler.prototype.checkLoopPointEdit = function(){
-		//it's going wrongness...
-		if(l.mouseIsPressed && !this.pMouseIsPressed){
-			this.initialPressPoint = l.mouseX
-		}
-		if(l.mouseIsPressed && this.pMouseIsPressed){
-			this.tmpLoopEnd = l.mouseX
-			this.drawEditPoints(this.initialPressPoint, this.tmpLoopEnd)
-		}
-		if(!l.mouseIsPressed && this.pMouseIsPressed){
-			console.log(this.initialPressPoint)
-			console.log(this.tmpLoopEnd)
-			this.updateLoopPoints(this.initialPressPoint, this.tmpLoopEnd)
-			this.loopEdit = false
-		}
-		this.pMouseIsPressed = l.mouseIsPressed
-	}
-
-	Sampler.prototype.updateLoopPoints = function(p1, p2){
-		let t1, t2
-		//check for mouse press and release in same place
-		//this sound have **some** duration
-		if(p1 === p2) {
-			t1 = l.map(p1, this.x, this.x + this.w, 0, this.soundPlayer.buffer.duration)
-			t2 = l.map(p2 + 1, this.x, this.x + this.w, 0, this.soundPlayer.buffer.duration)
-		}	else if(p1 < p2){
-			t1 = l.map(p1, this.x, this.x + this.w, 0, this.soundPlayer.buffer.duration)
-			t2 = l.map(p2, this.x, this.x + this.w, 0, this.soundPlayer.buffer.duration)
-		} else {
-			t1 = l.map(p2, this.x, this.x + this.w, 0, this.soundPlayer.buffer.duration)
-			t2 = l.map(p1, this.x, this.x + this.w, 0, this.soundPlayer.buffer.duration)
-		}
-		this.soundPlayer.setLoopPoints(t1, t2)
-		this.soundPlayer.seek(t1)
 	}
 }, 'lhasa-container')

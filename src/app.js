@@ -52,11 +52,11 @@ const lhasa = new p5(function(l){
 	}
 
 	l.windowResized = function(){
+		l.resizeCanvas(window.innerWidth, window.innerHeight)
 		samplers.forEach(function(sampler, index){
 			sampler.updatePosition(0, index * (l.height/2), l.width, l.height/2)
 			sampler.computeWaveform()
 		})
-		l.resizeCanvas(window.innerWidth, window.innerHeight)
 	}
 
 	//---------------------------------

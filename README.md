@@ -4,8 +4,10 @@ A simple sound file looper/explorer built with [p5 js][https://p5js.org] and [To
 **VERY WIP**
 
 Things to add
-- Volume control
-- Pitch control
-- A way to chose samples
+- ~~Volume control~~
+- ~~Pitch control~~
+- ~~Two sample players~~
+- Different samples in each (duh)
 - Better samples (lolz)
+- A way to chose samples
 - User sample upload (drag and drop). Maybe.
